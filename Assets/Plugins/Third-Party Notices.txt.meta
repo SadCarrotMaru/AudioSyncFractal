@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 45ad53db1406b67469fae569d528a88c
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 138254
+  packageName: CsCore
+  packageVersion: 1.4.0
+  assetPath: Assets/Plugins/Third-Party Notices.txt
+  uploadId: 378078
