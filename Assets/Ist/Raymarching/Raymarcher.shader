@@ -32,6 +32,7 @@ CGINCLUDE
 
 
 int _Scene;
+float _Var;
 float3 _Position;
 float4 _Rotation;
 float3 _Scale;
@@ -51,14 +52,17 @@ float map(float3 p)
 {
     p = localize(p);
 
+    float px = _Var;
     if(_Scene==0) {
-        return pseudo_kleinian( (p+float3(0.0, -0.5, 0.0)).xzy );
+        return pseudo_kleinian( (p+float3(0.0, -0.5, 0.0)).xzy, px);
     }
     else if (_Scene==1) {
         return tglad_formula(p);
     }
-    else {
+    else if (_Scene==2) {
         return pseudo_knightyan( (p+float3(0.0, -0.5, 0.0)).xzy );
+    } else {
+        return kaleidoscopic_IFS(p, _Var);
     }
 
     //return length(p)-1.0;

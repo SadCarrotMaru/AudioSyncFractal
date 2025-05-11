@@ -74,7 +74,7 @@ public class Raymarcher : MonoBehaviour
     public bool m_dbg_show_steps;
     public int m_scene;
     public Color m_fog_color = new Color(0.16f, 0.13f, 0.20f);
-    Material m_internal_material;
+    Material  m_internal_material;
     Vector2 m_resolution_prev;
     Mesh m_quad;
 
@@ -84,6 +84,16 @@ public class Raymarcher : MonoBehaviour
 
     bool m_enable_adaptive_prev;
     bool m_dbg_show_steps_prev;
+
+    // Set the parameter for animation
+    public void SetShaderVar(float value)
+    {
+        float m_var = value;
+        if (m_internal_material != null)
+        {
+            m_internal_material.SetFloat("_Var", m_var);
+        }
+    }
 
 #if UNITY_EDITOR
     void Reset()

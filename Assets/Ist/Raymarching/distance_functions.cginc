@@ -3,7 +3,7 @@
 
 #include "foundation.cginc"
 
-float kaleidoscopic_IFS(float3 z)
+float kaleidoscopic_IFS(float3 z, float rotate)
 {
     int FRACT_ITER      = 20;
     float FRACT_SCALE   = 1.8;
@@ -15,7 +15,7 @@ float kaleidoscopic_IFS(float3 z)
     float r;
     int n1 = 0;
     for (int n = 0; n < FRACT_ITER; n++) {
-        float rotate = PI*0.5;
+        // float rotate = PI*0.5;
         z = RotateX(z, rotate);
         z = RotateY(z, rotate);
         z = RotateZ(z, rotate);
@@ -86,12 +86,13 @@ float hartverdrahtet(float3 f)
     return fd*max(z,abs(length(f.xy)*f.z)/sqrt(dot(f,f)))/abs(v);
 }
 
-float pseudo_kleinian(float3 p)
+float pseudo_kleinian(float3 p, float factor)
 {
     float3 CSize = float3(0.92436,0.90756,0.92436);
     float Size = 1.0;
     float3 C = float3(0.0,0.0,0.0);
     float DEfactor=1.;
+     
     float3 Offset = float3(0.0,0.0,0.0);
     float3 ap=p+1.;
     for(int i=0;i<10 ;i++){
