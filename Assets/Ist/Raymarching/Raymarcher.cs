@@ -104,6 +104,27 @@ public class Raymarcher : MonoBehaviour
         }
     }
 
+    // Set the shader Color parameter from the animation script
+       public void SetShaderColor(Color color)
+    {
+        Color m_color = color;
+        if (m_internal_material != null)
+        {
+            m_internal_material.SetColor("_Color", m_color);
+        }
+    }
+
+
+    // Set the shader Color parameter from the animation script
+       public void SetShaderGlow(Color color)
+    {
+        Color m_color = color;
+        if (m_internal_material != null)
+        {
+            m_internal_material.SetColor("_GlowColor", m_color);
+        }
+    }
+
 
 #if UNITY_EDITOR
     void Reset()

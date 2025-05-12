@@ -5,6 +5,7 @@
 Shader "Raymarcher/RayMarcher" {
 Properties {
     _Color ("Color", Color) = (1,1,1,1)
+    _GlowColor ("GlowColor", Color) = (0.7, 0.7, 1.0, 1.0)
     _MainTex ("Albedo (RGB)", 2D) = "white" {}
     _Glossiness ("Smoothness", Range(0,1)) = 0.5
     _Metallic("Metallic", Range(0, 1)) = 0.0
@@ -13,6 +14,7 @@ Properties {
     _Scale("Scale", Vector) = (1, 1, 1, 0)
 
     _Scene("Scene", Float) = 0
+    _Var("Var", Float) = 1
 
     [Toggle(ENABLE_SCREENSPACE)] _EnableScreenSpace("ScreenSpace", Float) = 0
     [Toggle(ENABLE_ADAPTIVE)] _EnableAdaptive("Adaptive", Float) = 0
@@ -36,6 +38,7 @@ float _Var;
 float3 _Position;
 float4 _Rotation;
 float3 _Scale;
+float4 _GlowColor;
 
 float3 localize(float3 p)
 {
@@ -57,7 +60,12 @@ float map(float3 p)
         case 2: return tglad_formula(p, (abs((_Var % 100) - 50) - 10) * 0.4f);
         case 3: return hartverdrahtet((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f, 8);
         case 4: return pseudo_kleinian((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f);
-        default: return pseudo_knightyan((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f);
+        case 5: return pseudo_knightyan((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f);
+        default:
+            float d1 = kaleidoscopic_IFS(p, _Var * 0.2);
+            float d2 = pseudo_kleinian((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f);
+            float blend = 0.5 + 0.5 * sin(_Var * 0.1f);
+            return lerp(d1, d2, blend);
     }
 }
 
@@ -212,22 +220,46 @@ gbuffer_out frag_gbuffer(vs_out I)
     }
 #endif // ENABLE_ADAPTIVE
 
-    float glow = 0.0;
+//     float glow = 0.0;
+// #if ENABLE_PATTERN
+//     {
+//         float3 p3 = localize(ray_pos);
+//         p3 *= 2.0;
+//         glow += max((modc(length(p3) - time*3, 15.0) - 12.0)*0.7, 0.0);
+//         float2 p2 = pattern(p3.xz*0.5);
+//         if(p2.x<1.3) { glow = 0.0; }
+//     }
+// #endif // ENABLE_PATTERN
+//     glow += max(1.0-abs(dot(-GetCameraForward(), normal)) - 0.4, 0.0) * 1.0;
+
+float glowLine = 0.0;
+float glowFacing = 0.0;
+
 #if ENABLE_PATTERN
-    {
-        float3 p3 = localize(ray_pos);
-        p3 *= 2.0;
-        glow += max((modc(length(p3) - time*3, 15.0) - 12.0)*0.7, 0.0);
-        float2 p2 = pattern(p3.xz*0.5);
-        if(p2.x<1.3) { glow = 0.0; }
-    }
-#endif // ENABLE_PATTERN
-    glow += max(1.0-abs(dot(-GetCameraForward(), normal)) - 0.4, 0.0) * 1.0;
-    float3 emission = float3(0.7, 0.7, 1.0)*glow*0.6;
+{
+    float3 p3 = localize(ray_pos);
+    p3 *= 2.0;
+    glowLine = max((modc(length(p3) - time*3, 15.0) - 12.0)*0.7, 0.0);
+    float2 p2 = pattern(p3.xz*0.5);
+    if(p2.x < 1.3) { glowLine = 0.0; }
+}
+#endif
+
+glowFacing = max(1.0 - abs(dot(-GetCameraForward(), normal)) - 0.4, 0.0);
+
+    // Here we change the glow color
+    // float3 emission = float3(0.7, 0.7, 1.0)*glow*0.6;
+    // float3 emission = _GlowColor.rgb * glow * 0.6;
+    float3 emission = _GlowColor.rgb * glowLine * 0.6 + (1, 1, 1, 1) * glowFacing;
+
 
     gbuffer_out O;
-    O.diffuse = float4(0.75, 0.75, 0.80, 1.0);
-    O.spec_smoothness = float4(0.2, 0.2, 0.2, _Glossiness);
+    // Here we change the fractal color
+    // O.diffuse = float4(0.75, 0.75, 0.80, 1.0);
+    O.diffuse = float4(_Color.rgb, 1.0);
+    // O.spec_smoothness = float4(0.2, 0.2, 0.2, _Glossiness);
+    O.spec_smoothness = float4(_Color.rgb * 0.2, _Glossiness);
+    
     O.normal = float4(normal*0.5+0.5, 1.0);
     O.emission = float4(emission, 1.0);
 #ifndef UNITY_HDR_ON
