@@ -72,7 +72,6 @@ public class Raymarcher : MonoBehaviour
     public bool m_enable_temporal = true;
     public bool m_enable_glowline = true;
     public bool m_dbg_show_steps;
-    public int m_scene;
     public Color m_fog_color = new Color(0.16f, 0.13f, 0.20f);
     Material  m_internal_material;
     Vector2 m_resolution_prev;
@@ -85,7 +84,7 @@ public class Raymarcher : MonoBehaviour
     bool m_enable_adaptive_prev;
     bool m_dbg_show_steps_prev;
 
-    // Set the parameter for animation
+    // Set the shader Var parameter from the animation script
     public void SetShaderVar(float value)
     {
         float m_var = value;
@@ -94,6 +93,17 @@ public class Raymarcher : MonoBehaviour
             m_internal_material.SetFloat("_Var", m_var);
         }
     }
+
+    // Set the shader Scene parameter from the animation script
+       public void SetShaderScene(float scene)
+    {
+        float m_scene = scene;
+        if (m_internal_material != null)
+        {
+            m_internal_material.SetFloat("_Scene", m_scene);
+        }
+    }
+
 
 #if UNITY_EDITOR
     void Reset()
@@ -171,7 +181,6 @@ public class Raymarcher : MonoBehaviour
     {
         if(m_internal_material == null) { return; }
 
-        m_internal_material.SetFloat("_Scene", m_scene);
         SwitchKeyword(m_internal_material, "ENABLE_ADAPTIVE",    m_enable_adaptive );
         SwitchKeyword(m_internal_material, "ENABLE_TEMPORAL",    m_enable_temporal );
         SwitchKeyword(m_internal_material, "ENABLE_PATTERN",     m_enable_glowline );

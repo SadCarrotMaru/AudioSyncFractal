@@ -41,10 +41,11 @@ public class RaymarcherHUD : MonoBehaviour
             }
         }
 
-        if (GUI.Button(new Rect(30, 180, 120, 20), "next scene"))
-        {
-            rm.m_scene = (rm.m_scene + 1) % 3;
-        }
+        // Refactored scene selection through animation script
+        // if (GUI.Button(new Rect(30, 180, 120, 20), "next scene"))
+        // {
+        //     rm.m_scene = (rm.m_scene + 1) % 3;
+        // }
 
         GUI.Label(new Rect(20, 210, 210, 20), "tab: show / hide UI");
     }

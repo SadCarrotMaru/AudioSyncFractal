@@ -52,23 +52,13 @@ float map(float3 p)
 {
     p = localize(p);
 
-    float px = _Var;
-    if(_Scene==0) {
-        return pseudo_kleinian( (p+float3(0.0, -0.5, 0.0)).xzy, px);
+    switch(_Scene) {
+        case 1: return kaleidoscopic_IFS(p, _Var * 0.2);
+        case 2: return tglad_formula(p);
+        case 3: return hartverdrahtet( (p+float3(0.0, -0.5, 0.0)).xzy);
+        case 4: return pseudo_kleinian( (p+float3(0.0, -0.5, 0.0)).xzy, _Var);
+        default: return pseudo_knightyan( (p+float3(0.0, -0.5, 0.0)).xzy);
     }
-    else if (_Scene==1) {
-        return tglad_formula(p);
-    }
-    else if (_Scene==2) {
-        return pseudo_knightyan( (p+float3(0.0, -0.5, 0.0)).xzy );
-    } else {
-        return kaleidoscopic_IFS(p, _Var);
-    }
-
-    //return length(p)-1.0;
-    //return kaleidoscopic_IFS(p);
-    //return pseudo_knightyan( (p+float3(0.0, -0.5, 0.0)).xzy );
-    //return hartverdrahtet( (p+float3(0.0, -0.5, 0.0)).xzy );
 }
 
 float3 guess_normal(float3 p)
