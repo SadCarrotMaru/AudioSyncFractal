@@ -54,10 +54,10 @@ float map(float3 p)
 
     switch(_Scene) {
         case 1: return kaleidoscopic_IFS(p, _Var * 0.2);
-        case 2: return tglad_formula(p);
-        case 3: return hartverdrahtet( (p+float3(0.0, -0.5, 0.0)).xzy);
-        case 4: return pseudo_kleinian( (p+float3(0.0, -0.5, 0.0)).xzy, _Var);
-        default: return pseudo_knightyan( (p+float3(0.0, -0.5, 0.0)).xzy);
+        case 2: return tglad_formula(p, (abs((_Var % 100) - 50) - 10) * 0.4f);
+        case 3: return hartverdrahtet((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f, 8);
+        case 4: return pseudo_kleinian((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f);
+        default: return pseudo_knightyan((p+float3(0.0, -0.5, 0.0)).xzy, _Var * 0.1f);
     }
 }
 

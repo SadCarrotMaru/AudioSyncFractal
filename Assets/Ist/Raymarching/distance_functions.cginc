@@ -30,12 +30,12 @@ float kaleidoscopic_IFS(float3 z, float rotate)
 }
 
 
-float tglad_formula(float3 z0)
+float tglad_formula(float3 z0, float var)
 {
     z0 = modc(z0, 2.0);
 
-    float mr=0.25, mxr=1.0;
-    float4 scale=float4(-3.12,-3.12,-3.12,3.12), p0=float4(0.0,1.59,-1.0,0.0);
+    float mr=0.25 , mxr=1.0;
+    float4 scale=float4(-3.12 - var, -3.12 - var, -3.12 - var, 3.12 + var), p0=float4(0.0,1.59,-1.0,0.0);
     float4 z = float4(z0,1.0);
     for (int n = 0; n < 3; n++) {
         z.xyz=clamp(z.xyz, -0.94, 0.94)*2.0-z.xyz;
@@ -49,9 +49,10 @@ float tglad_formula(float3 z0)
 
 // distance function from Hartverdrahtet
 // ( http://www.pouet.net/prod.php?which=59086 )
-float hartverdrahtet(float3 f)
+float hartverdrahtet(float3 f, float var, int i)
 {
     float3 cs=float3(.808,.808,1.167);
+    cs += sin(var)* 0.2f;
     float fs=1.;
     float3 fc=0;
     float fu=10.;
@@ -59,15 +60,15 @@ float hartverdrahtet(float3 f)
     
     // scene selection
     {
-        float time = _Time.y;
-        int i = int(modc(time/2.0, 9.0));
+        // float time = _Time.y;
+        // int i = int(modc(time/2.0, 9.0));
         if(i==0) cs.y=.58;
         if(i==1) cs.xy=.5;
         if(i==2) cs.xy=.5;
         if(i==3) fu=1.01,cs.x=.9;
         if(i==4) fu=1.01,cs.x=.9;
-        if(i==6) cs=float3(.5,.5,1.04);
         if(i==5) fu=.9;
+        if(i==6) cs=float3(.5,.5,1.04);
         if(i==7) fd=.7,fs=1.34,cs.xy=.5;
         if(i==8) fc.z=-.38;
     }
@@ -86,13 +87,14 @@ float hartverdrahtet(float3 f)
     return fd*max(z,abs(length(f.xy)*f.z)/sqrt(dot(f,f)))/abs(v);
 }
 
-float pseudo_kleinian(float3 p, float factor)
+
+float pseudo_kleinian(float3 p, float var)
 {
     float3 CSize = float3(0.92436,0.90756,0.92436);
+    CSize -= sin(var) * 0.2f;
     float Size = 1.0;
     float3 C = float3(0.0,0.0,0.0);
     float DEfactor=1.;
-     
     float3 Offset = float3(0.0,0.0,0.0);
     float3 ap=p+1.;
     for(int i=0;i<10 ;i++){
@@ -108,9 +110,10 @@ float pseudo_kleinian(float3 p, float factor)
     return r;
 }
 
-float pseudo_knightyan(float3 p)
+float pseudo_knightyan(float3 p, float var)
 {
     float3 CSize = float3(0.63248,0.78632,0.875);
+    CSize -= sin(var) * 0.2f;
     float DEfactor=1.;
     for(int i=0;i<6;i++){
         p = 2.*clamp(p, -CSize, CSize)-p;

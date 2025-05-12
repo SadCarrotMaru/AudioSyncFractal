@@ -13,7 +13,7 @@ public class FractalAnimation : MonoBehaviour
 {
 
     public Raymarcher targetRaymarcher;
-    public FractalScene scene = FractalScene.Kaleidoscopic; // Which fractal to render
+    public FractalScene scene = FractalScene.Hartverdrahtet; // Which fractal to render
     [Range(0f, 5f)]
     public float speed = 1f; // var increase per second
     private float currentVar = 0.0f;
