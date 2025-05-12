@@ -7,6 +7,7 @@ using SFB;
 
 // Mai vreau sa fac si un visualizer pentru audio, ca sa va fie mai usor pt sincronizarea cu fractalii + o sa mai fac un file cu filtre (low pass, high pass, kalman, etc), nu stiu cum ies dar sa atenuez tranzitiile pt fractali
 // Hopefully in vacanta
+/*
 public class Mp3FilePickerAnalyzer : MonoBehaviour
 {
     public int sampleSize = 1024;
@@ -162,3 +163,4 @@ public class Mp3FilePickerAnalyzer : MonoBehaviour
         return (float)(geoMean / arithMean);
     }
 }
+*/
