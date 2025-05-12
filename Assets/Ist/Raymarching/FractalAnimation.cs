@@ -61,12 +61,15 @@ public class FractalAnimation : MonoBehaviour
         var intensity = Mathf.PingPong(AudioPeer.spectralRolloffBuffer, 1.0f);
         smoothedIntensity = Mathf.SmoothDamp(smoothedIntensity, intensity,
                                             ref colorVelocity, colorSmoothTime);
-        Color dynamicColor = new Color(
+        Color dynamicColor = color;
+        if(useAudio){
+            dynamicColor = new Color(
                 color.r * intensity,
                 color.g * intensity,
                 color.b * intensity,
                 color.a
             );
+        }
 
         targetRaymarcher.SetShaderScene((float)scene);
         targetRaymarcher.SetShaderColor(dynamicColor);
