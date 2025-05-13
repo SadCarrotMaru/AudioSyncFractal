@@ -1,7 +1,18 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.judahperez.hsvcolorpicker"
+      ]
+    }
+  ],
   "dependencies": {
+    "com.unity.ide.rider": "3.0.36",
     "com.unity.multiplayer.center": "1.0.0",
     "com.unity.ugui": "2.0.0",
+    "com.unity.uiextensions": "https://github.com/Unity-UI-Extensions/com.unity.uiextensions.git",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",

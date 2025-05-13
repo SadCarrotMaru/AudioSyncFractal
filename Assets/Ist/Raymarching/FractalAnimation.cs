@@ -7,7 +7,6 @@ public enum FractalScene
     Hartverdrahtet = 3,
     Kleinian = 4,
     Knightyan = 5,
-    Blend = 6
 }
 
 public enum AudioType
@@ -19,7 +18,9 @@ public enum AudioType
 public class FractalAnimation : MonoBehaviour
 {
     public bool useAudio = false;
-    public AudioType audioType = AudioType.Amplitude;
+    // public AudioType audioType = AudioType.Amplitude;
+    public AudioType audioType = AudioType.SpectralRollOff;
+
     public Raymarcher targetRaymarcher;
     public FractalScene scene = FractalScene.Hartverdrahtet; // Which fractal to render
     [Range(0f, 5f)]
