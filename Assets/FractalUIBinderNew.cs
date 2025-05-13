@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;               // ← for Slider
 using TMPro;
-using UnityEngine.UI.Extensions.ColorPicker;
+using UnityEngine.UI.Extensions.ColorPicker;  // ← for ColorPickerControl
+
 public class FractalUIBinderNew : MonoBehaviour
 {
     [Header("UI Elements")]
     public TMP_Dropdown         sceneDropdown;
+    public Slider               speedSlider;
     public ColorPickerControl   baseColorPicker;
     public ColorPickerControl   glowColorPicker;
 
@@ -14,6 +17,7 @@ public class FractalUIBinderNew : MonoBehaviour
 
     void Start()
     {
+        // — Scene Dropdown —
         var names = System.Enum.GetNames(typeof(FractalScene));
         sceneDropdown.ClearOptions();
         sceneDropdown.AddOptions(new List<string>(names));
@@ -21,6 +25,14 @@ public class FractalUIBinderNew : MonoBehaviour
         sceneDropdown.RefreshShownValue();
         sceneDropdown.onValueChanged.AddListener(OnSceneChanged);
 
+        speedSlider.minValue = 0f;
+        speedSlider.maxValue = 5f;
+        speedSlider.value    = fractalAnim.speed;
+        speedSlider.onValueChanged.AddListener(v => {
+            fractalAnim.speed = v;
+        });
+
+        // — Base Color Picker —
         baseColorPicker.CurrentColor = fractalAnim.color;
         baseColorPicker.onValueChanged.AddListener(c =>
         {
@@ -28,6 +40,7 @@ public class FractalUIBinderNew : MonoBehaviour
             fractalAnim.targetRaymarcher.SetShaderColor(c);
         });
         
+        // — Glow Color Picker —
         glowColorPicker.CurrentColor = fractalAnim.glow_color;
         glowColorPicker.onValueChanged.AddListener(c =>
         {
@@ -38,7 +51,6 @@ public class FractalUIBinderNew : MonoBehaviour
 
     private void OnSceneChanged(int idx)
     {
-        // dropdown index 0→scene 1
         fractalAnim.scene = (FractalScene)(idx + 1);
         fractalAnim.targetRaymarcher.SetShaderScene((float)fractalAnim.scene);
     }
