@@ -1,55 +1,101 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
+using UnityEngine.UI.Extensions.ColorPicker; 
+using UnityEngine.Networking;                
+using SFB;                                  
 
 public class FractalUIBinder : MonoBehaviour
 {
     [Header("UI Elements")]
-    public TMP_Dropdown        sceneDropdown;
-    public FlexibleColorPicker baseColorPicker;
-    public FlexibleColorPicker glowColorPicker;
+    public TMP_Dropdown         sceneDropdown;
+    public Slider               speedSlider;
+    public ColorPickerControl   baseColorPicker;
+    public ColorPickerControl   glowColorPicker;
+    public Button               browseButton; 
+    public TMP_Text             songLabel; 
+    
+    [Header("Fractal & Audio")]
+    public FractalAnimation     fractalAnim;
+    public AudioPeer            audioPeer;      
 
-    [Header("Fractal Script")]
-    public FractalAnimation    fractalAnim;
-
+    AudioSource audioSource;             
     void Start()
     {
-        // Populate the dropdown
         var names = System.Enum.GetNames(typeof(FractalScene));
         sceneDropdown.ClearOptions();
-        sceneDropdown.AddOptions(new System.Collections.Generic.List<string>(names));
+        sceneDropdown.AddOptions(new List<string>(names));
         sceneDropdown.value = (int)fractalAnim.scene - 1;
         sceneDropdown.RefreshShownValue();
         sceneDropdown.onValueChanged.AddListener(OnSceneChanged);
 
-        // Initialize the pickers to the fractal’s current colors
-        if (baseColorPicker != null)
-        {
-            baseColorPicker.color = fractalAnim.color;
-            baseColorPicker.onColorChange.AddListener(OnBaseColorChanged);
-        }
+        speedSlider.minValue = 0f;
+        speedSlider.maxValue = 5f;
+        speedSlider.value    = fractalAnim.speed;
+        speedSlider.onValueChanged.AddListener(v => fractalAnim.speed = v);
 
-        if (glowColorPicker != null)
+        baseColorPicker.CurrentColor = fractalAnim.color;
+        baseColorPicker.onValueChanged.AddListener(c =>
         {
-            glowColorPicker.color = fractalAnim.glow_color;
-            glowColorPicker.onColorChange.AddListener(OnGlowColorChanged);
-        }
+            fractalAnim.color = c;
+            fractalAnim.targetRaymarcher.SetShaderColor(c);
+        });
+
+        glowColorPicker.CurrentColor = fractalAnim.glow_color;
+        glowColorPicker.onValueChanged.AddListener(c =>
+        {
+            fractalAnim.glow_color = c;
+            fractalAnim.targetRaymarcher.SetShaderGlow(c);
+        });
+
+        browseButton.onClick.AddListener(OpenMp3Browser);
+        songLabel.text = "Song: None";
+        fractalAnim.useAudio = false;
+
+        fractalAnim.audioType = AudioType.SpectralRollOff;
     }
 
     private void OnSceneChanged(int idx)
     {
         fractalAnim.scene = (FractalScene)(idx + 1);
         fractalAnim.targetRaymarcher.SetShaderScene((float)fractalAnim.scene);
+        sceneDropdown.RefreshShownValue();
     }
 
-    private void OnBaseColorChanged(Color c)
+    void OpenMp3Browser()
     {
-        fractalAnim.color = c;
-        fractalAnim.targetRaymarcher.SetShaderColor(c);
+        var paths = StandaloneFileBrowser.OpenFilePanel(
+            title:      "Select MP3",
+            directory:  "",
+            extension:  "mp3",
+            multiselect:false
+        );
+
+        if (paths.Length > 0 && !string.IsNullOrEmpty(paths[0]))
+            StartCoroutine(LoadAndPlayMp3(paths[0]));
     }
 
-    private void OnGlowColorChanged(Color c)
+    IEnumerator LoadAndPlayMp3(string fullPath)
     {
-        fractalAnim.glow_color = c;
-        fractalAnim.targetRaymarcher.SetShaderGlow(c);
+        var url = "file:///" + fullPath.Replace("\\", "/");
+        using (var uwr = UnityWebRequestMultimedia.GetAudioClip(url, UnityEngine.AudioType.MPEG))        {
+            yield return uwr.SendWebRequest();
+            if (uwr.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError($"MP3 load error: {uwr.error}");
+                songLabel.text = "Song: <error>";
+            }
+            else
+            {
+                var clip = DownloadHandlerAudioClip.GetContent(uwr);
+                
+                audioPeer.PlayClip(clip);
+                fractalAnim.useAudio = true;
+                songLabel.text = "Song: " + Path.GetFileNameWithoutExtension(fullPath);
+            }
+        }
     }
 }

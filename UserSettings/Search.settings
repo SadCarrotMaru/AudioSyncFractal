@@ -9,7 +9,7 @@ onBoardingDoNotAskAgain = true
 showPackageIndexes = false
 showStatusBar = false
 scopes = {
-	"last_search.66F56946" = "ColorPicker"
+	"last_search.66F56946" = "AudioPeer"
 	"OpenInspectorPreview.66F56946" = "0"
 	"currentGroup.66F56946" = null
 	"picker_window_position_offset.075BCD15" = "272;48,8;320;550,4"
@@ -72,6 +72,7 @@ providers = {
 objectSelectors = {
 }
 recentSearches = [
+	"Audi"
 	"ColorPickerC"
 	"Color"
 	"HSVCo"
