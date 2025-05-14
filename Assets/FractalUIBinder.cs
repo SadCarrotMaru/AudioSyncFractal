@@ -21,10 +21,11 @@ public class FractalUIBinder : MonoBehaviour
     [Header("Fractal & Audio")]
     public FractalAnimation     fractalAnim;
     public AudioPeer            audioPeer;      
-
+    public static bool useAudio = false; // static for other scripts to access
     AudioSource audioSource;             
     void Start()
     {
+        useAudio = false; // reset static variable
         var names = System.Enum.GetNames(typeof(FractalScene));
         sceneDropdown.ClearOptions();
         sceneDropdown.AddOptions(new List<string>(names));
@@ -94,6 +95,7 @@ public class FractalUIBinder : MonoBehaviour
                 
                 audioPeer.PlayClip(clip);
                 fractalAnim.useAudio = true;
+                useAudio = true; // set static variable
                 songLabel.text = "Song: " + Path.GetFileNameWithoutExtension(fullPath);
             }
         }
