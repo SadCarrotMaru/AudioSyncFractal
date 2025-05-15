@@ -1,3 +1,4 @@
+using Unity.Mathematics.Geometry;
 using UnityEngine;
 
 public enum FractalScene
@@ -62,13 +63,21 @@ public class FractalAnimation : MonoBehaviour
         var intensity = Mathf.PingPong(AudioPeer.spectralRolloffBuffer, 1.0f);
         smoothedIntensity = Mathf.SmoothDamp(smoothedIntensity, intensity,
                                             ref colorVelocity, colorSmoothTime);
-        Color dynamicColor = new Color(
-                color.r * intensity,
-                color.g * intensity,
-                color.b * intensity,
+
+        Color dynamicColor = color;
+        
+        if (useAudio)
+        {
+            float scaled = Mathf.Clamp01(intensity * 5f);
+            dynamicColor = new Color(
+                color.r * scaled,
+                color.g * scaled,
+                color.b * scaled,
                 color.a
             );
-
+        }
+        
+        
         targetRaymarcher.SetShaderScene((float)scene);
         targetRaymarcher.SetShaderColor(dynamicColor);
         targetRaymarcher.SetShaderGlow(glow_color);
