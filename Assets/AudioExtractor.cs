@@ -9,8 +9,6 @@ using UnityEngine;
 public struct AudioFeaturesNWaves
 {
     public float MfccMean;
-    public float ChromaMean;
-    public float MelspecMean;
     public float LpcMean;
     public float PitchMean;
     public float CentroidMean;
@@ -22,176 +20,170 @@ public struct AudioFeaturesNWaves
 public static class AudioFeatureExtractorNWaves
 {
     private const double FrameDuration = 0.04;
-    private const double HopDuration   = 0.010;
+    private const double HopDuration   = 0.01;
     private const int    SampleRate    = 44100;
 
     // Configure MFCC
-    private static readonly MfccOptions MfccOpts = new MfccOptions
+    private static readonly MfccExtractor MfccEx = new MfccExtractor(new MfccOptions
     {
         SamplingRate   = SampleRate,
         FrameDuration  = FrameDuration,
         HopDuration    = HopDuration,
         FeatureCount   = 13,
-        FilterBankSize = 26,               // typical mel bands
+        FilterBankSize = 26,
         Window         = WindowType.Hamming
-    };
-    private static readonly MfccExtractor MfccEx = new MfccExtractor(MfccOpts);
-
-    // Configure Chroma
-    private static readonly ChromaOptions ChromaOpts = new ChromaOptions
-    {
-        SamplingRate = SampleRate,
-        FrameDuration = FrameDuration,
-        HopDuration = HopDuration,
-        Window = WindowType.Hamming
-    };
-    
-    private static readonly ChromaExtractor ChromaEx = new ChromaExtractor(ChromaOpts);
-
-    // Configure Mel‐bank (Filterbank)
-    private static readonly FilterbankOptions MelOpts = new FilterbankOptions
-    {
-        SamplingRate   = SampleRate,
-        FrameDuration  = FrameDuration,
-        HopDuration    = HopDuration,
-        FeatureCount   = 128,
-        Window         = WindowType.Hamming
-    };
-    private static readonly FilterbankExtractor MelEx = new FilterbankExtractor(MelOpts);
+    });
 
     // Configure LPC
-    private static readonly LpcOptions LpcOpts = new LpcOptions
+    private static readonly LpcExtractor LpcEx = new LpcExtractor(new LpcOptions
     {
         SamplingRate   = SampleRate,
         FrameDuration  = FrameDuration,
         HopDuration    = HopDuration,
         LpcOrder       = 12
-    };
-    private static readonly LpcExtractor LpcEx = new LpcExtractor(LpcOpts);
+    });
 
     // Configure Pitch
-    private static readonly PitchOptions PitchOpts = new PitchOptions
+    private static readonly PitchExtractor PitchEx = new PitchExtractor(new PitchOptions
     {
         SamplingRate   = SampleRate,
         FrameDuration  = FrameDuration,
         HopDuration    = HopDuration,
-    };
-    private static readonly PitchExtractor PitchEx = new PitchExtractor(PitchOpts);
+    });
 
-    private static readonly MultiFeatureOptions SpectralOpts = new MultiFeatureOptions
-    {
-        SamplingRate  = SampleRate,
-        FrameDuration = FrameDuration,
-        HopDuration   = HopDuration,
-        FeatureList   = "centroid,spread,contrast,rolloff",
-        Window        = WindowType.Hamming
-    };
+    // Configure Spectral (centroid, spread, contrast, rolloff)
     private static readonly SpectralFeaturesExtractor SpectralEx =
-        new SpectralFeaturesExtractor(SpectralOpts);
+        new SpectralFeaturesExtractor(new MultiFeatureOptions
+    {
+        SamplingRate   = SampleRate,
+        FrameDuration  = FrameDuration,
+        HopDuration    = HopDuration,
+        FeatureList    = "centroid,spread,contrast,rolloff",
+        Window         = WindowType.Hamming
+    });
+
+    /// <summary>
+    /// Convenience wrapper: pull raw float samples out of a Unity AudioClip,
+    /// downmix to mono, check/resample rate, then call Extract(samples, sr).
+    /// </summary>
+    public static AudioFeaturesNWaves FromAudioClip(AudioClip clip)
+    {
+        // 1) sample-rate check
+        if (clip.frequency != SampleRate)
+        {
+            Debug.LogWarning($"AudioClip SR = {clip.frequency}, expected {SampleRate}. Features may be off.");
+            // (If you need true resampling, plug in NWaves resampler here.)
+        }
+
+        // 2) pull interleaved samples
+        int totalSamples = clip.samples * clip.channels;
+        var data = new float[totalSamples];
+        clip.GetData(data, 0);
+
+        // 3) downmix stereo/ multi-channel → mono
+        float[] mono;
+        if (clip.channels > 1)
+        {
+            int frames = data.Length / clip.channels;
+            mono = new float[frames];
+            for (int i = 0; i < frames; i++)
+            {
+                float sum = 0f;
+                for (int c = 0; c < clip.channels; c++)
+                    sum += data[i * clip.channels + c];
+                mono[i] = sum / clip.channels;
+            }
+        }
+        else
+        {
+            mono = data;
+        }
+
+        // 4) extract
+        return Extract(mono, clip.frequency);
+    }
 
     public static AudioFeaturesNWaves Extract(float[] samples, int sr)
     {
         var f = new AudioFeaturesNWaves();
 
-        // Utility local to log stats
-        void LogStats(string name, float[] data)
+        void LogStats(string name, float[] arr)
         {
-            if (data == null || data.Length == 0)
+            if (arr == null || arr.Length == 0)
             {
-                Debug.LogWarning($"{name} returned no data");
+                Debug.LogWarning($"{name}: no data");
                 return;
             }
-            float mean = data.Average();
-            float min  = data.Min();
-            float max  = data.Max();
-            Debug.Log($"{name}: count={data.Length}, mean={mean:F4}, min={min:F4}, max={max:F4}");
-            if (data.Any(x => float.IsNaN(x) || float.IsInfinity(x)))
-                Debug.LogWarning($"{name} contains NaN or Infinity");
+            var mean = arr.Average();
+            var min  = arr.Min();
+            var max  = arr.Max();
+            Debug.Log($"{name}: count={arr.Length}, mean={mean:F4}, min={min:F4}, max={max:F4}");
+            if (arr.Any(x => float.IsNaN(x) || float.IsInfinity(x)))
+                Debug.LogWarning($"{name}: contains NaN/∞");
         }
 
+        // → MFCC
         try
         {
             var mfcc = MfccEx.ComputeFrom(samples);
-            Debug.Log($"MFCC frames: {mfcc.Count} × {mfcc[0].Length}");
-            var mfccFlat = mfcc.SelectMany(r => r).ToArray();
-            LogStats("MFCC", mfccFlat);
-            f.MfccMean = mfccFlat.Average();
+            Debug.Log($"MFCC frames: {mfcc.Count}×{mfcc[0].Length}");
+            var flat = mfcc.SelectMany(r => r).ToArray();
+            LogStats("MFCC", flat);
+            f.MfccMean = flat.Average();
         }
         catch (Exception ex)
         {
-            Debug.LogError($"MFCC extraction failed: {ex}");
+            Debug.LogError($"MFCC failed: {ex}");
             f.MfccMean = 0f;
         }
 
-        try
-        {
-            var chroma = ChromaEx.ComputeFrom(samples);
-            Debug.Log($"Chroma frames: {chroma.Count} × {chroma[0].Length}");
-            var chFlat = chroma.SelectMany(r => r).ToArray();
-            LogStats("Chroma", chFlat);
-            f.ChromaMean = chFlat.Average();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Chroma extraction failed: {ex}");
-            f.ChromaMean = 0f;
-        }
-
-        try
-        {
-            var mels = MelEx.ComputeFrom(samples);
-            Debug.Log($"Melspec frames: {mels.Count} × {mels[0].Length}");
-            var melFlat = mels.SelectMany(r => r).ToArray();
-            LogStats("Melspec", melFlat);
-            f.MelspecMean = melFlat.Average();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Melspec extraction failed: {ex}");
-            f.MelspecMean = 0f;
-        }
-
+        // → LPC
         try
         {
             var lpc = LpcEx.ComputeFrom(samples);
-            Debug.Log($"LPC frames: {lpc.Count} × {lpc[0].Length}");
-            var lpcFlat = lpc.SelectMany(r => r).ToArray();
-            var cleaned = lpcFlat.Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).ToArray();
-            LogStats("LPC", cleaned);
-            f.LpcMean = cleaned.Average();
+            Debug.Log($"LPC frames: {lpc.Count}×{lpc[0].Length}");
+            var flat = lpc.SelectMany(r => r)
+                          .Where(v => !float.IsNaN(v) && !float.IsInfinity(v))
+                          .ToArray();
+            LogStats("LPC", flat);
+            f.LpcMean = flat.Average();
         }
         catch (Exception ex)
         {
-            Debug.LogError($"LPC extraction failed: {ex}");
+            Debug.LogError($"LPC failed: {ex}");
             f.LpcMean = 0f;
         }
 
+        // → Pitch
         try
         {
             var pitch = PitchEx.ComputeFrom(samples);
-            Debug.Log($"Pitch frames: {pitch.Count} × {pitch[0].Length}");
-            var pFlat = pitch.SelectMany(r => r).Where(v => v > 0).DefaultIfEmpty(0f).ToArray();
-            LogStats("Pitch", pFlat);
-            f.PitchMean = pFlat.Average();
+            Debug.Log($"Pitch frames: {pitch.Count}×{pitch[0].Length}");
+            var flat = pitch.SelectMany(r => r)
+                            .Where(v => v > 0)
+                            .DefaultIfEmpty(0f)
+                            .ToArray();
+            LogStats("Pitch", flat);
+            f.PitchMean = flat.Average();
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Pitch extraction failed: {ex}");
+            Debug.LogError($"Pitch failed: {ex}");
             f.PitchMean = 0f;
         }
 
+        // → Spectral (centroid, spread, contrast, rolloff)
         try
         {
             var spec = SpectralEx.ComputeFrom(samples);
-            Debug.Log($"Spectral frames: {spec.Count} × {spec[0].Length}");
-            // spec columns: centroid, spread, contrast, rolloff
+            Debug.Log($"Spectral frames: {spec.Count}×{spec[0].Length}");
             var cent  = spec.Select(r => r[0]).ToArray();
             var spread= spec.Select(r => r[1]).ToArray();
             var cont  = spec.Select(r => r[2]).ToArray();
             var roll  = spec.Select(r => r[3]).ToArray();
 
             LogStats("Centroid", cent);
-            LogStats("Bandwidth(spread)", spread);
+            LogStats("Bandwidth", spread);
             LogStats("Contrast", cont);
             LogStats("Rolloff", roll);
 
@@ -202,7 +194,7 @@ public static class AudioFeatureExtractorNWaves
         }
         catch (Exception ex)
         {
-            Debug.LogError($"SpectralFeature extraction failed: {ex}");
+            Debug.LogError($"Spectral failed: {ex}");
             f.CentroidMean = f.BandwidthMean = f.ContrastMean = f.RolloffMean = 0f;
         }
 

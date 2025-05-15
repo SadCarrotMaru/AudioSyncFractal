@@ -84,96 +84,133 @@ public class FractalUIBinder : MonoBehaviour
         if (paths.Length > 0 && !string.IsNullOrEmpty(paths[0]))
             StartCoroutine(LoadAndPlayMp3(paths[0]));
     }
+    
+    // IEnumerator LoadAndPlayMp3(string fullPath)
+    // {
+    //     var url = "file:///" + fullPath.Replace("\\", "/");
+    //     using (var uwr = UnityWebRequestMultimedia.GetAudioClip(url, UnityEngine.AudioType.MPEG))
+    //     {
+    //         yield return uwr.SendWebRequest();
+    //         if (uwr.result != UnityWebRequest.Result.Success)
+    //         {
+    //             Debug.LogError($"MP3 load error: {uwr.error}");
+    //             songLabel.text = "Song: <error>";
+    //         }
+    //         else
+    //         {
+    //             var clip = DownloadHandlerAudioClip.GetContent(uwr);
+    //             audioPeer.PlayClip(clip);
+    //             fractalAnim.useAudio = true;
+    //             useAudio = true;
+    //             songLabel.text = "Song: " + Path.GetFileNameWithoutExtension(fullPath);
+    //
+    //             int samplesCount = clip.samples * clip.channels;
+    //             float[] raw = new float[samplesCount];
+    //             clip.GetData(raw, 0);
+    //
+    //             float[] mono = new float[clip.samples];
+    //             if (clip.channels == 1)
+    //             {
+    //                 mono = raw;
+    //             }
+    //             else
+    //             {
+    //                 for (int i = 0; i < clip.samples; i++)
+    //                 {
+    //                     float sum = 0;
+    //                     for (int c = 0; c < clip.channels; c++)
+    //                         sum += raw[i * clip.channels + c];
+    //                     mono[i] = sum / clip.channels;
+    //                 }
+    //             }
+    //
+    //             float[] monoSamples = mono;
+    //             int sampleRate = clip.frequency;
+    //
+    //             // Feature extraction
+    //             var feats = AudioFeatureExtractorNWaves.Extract(monoSamples, sampleRate);
+    //             float[] input = new float[7] {
+    //                 feats.MfccMean,
+    //                 feats.LpcMean,
+    //                 feats.PitchMean,
+    //                 feats.CentroidMean,
+    //                 feats.BandwidthMean,
+    //                 feats.ContrastMean,
+    //                 feats.RolloffMean
+    //             };
+    //
+    //             // --- ⚡ Non-blocking prediction ⚡ ---
+    //             var moodTask = moodModel.PredictMoodAsync(input);
+    //
+    //             // Wait asynchronously without blocking the main thread
+    //             yield return new WaitUntil(() => moodTask.IsCompleted);
+    //
+    //             if (moodTask.Exception != null)
+    //             {
+    //                 Debug.LogError("Mood prediction failed: " + moodTask.Exception);
+    //             }
+    //             else
+    //             {
+    //                 var moodResult = moodTask.Result; // Now safe, task complete
+    //                 Color suggested = MoodInference.FromValenceArousal(moodResult[0], moodResult[1]);
+    //
+    //                 Debug.Log($"Valence: {moodResult[0]}, Arousal: {moodResult[1]}, Suggested Color: {suggested}");
+    //
+    //                 // Update color pickers safely
+    //                 baseColorPicker.CurrentColor = suggested;
+    //                 baseColorPicker.onValueChanged.Invoke(suggested);
+    //                 glowColorPicker.CurrentColor = suggested;
+    //                 glowColorPicker.onValueChanged.Invoke(suggested);
+    //             }
+    //         }
+    //     }
+    // }
 
     IEnumerator LoadAndPlayMp3(string fullPath)
+{
+    var url = "file:///" + fullPath.Replace("\\", "/");
+    using (var uwr = UnityWebRequestMultimedia.GetAudioClip(url, UnityEngine.AudioType.MPEG))
     {
-        var url = "file:///" + fullPath.Replace("\\", "/");
-        using (var uwr = UnityWebRequestMultimedia.GetAudioClip(url, UnityEngine.AudioType.MPEG))        {
-            yield return uwr.SendWebRequest();
-            if (uwr.result != UnityWebRequest.Result.Success)
+        yield return uwr.SendWebRequest();
+        if (uwr.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError($"MP3 load error: {uwr.error}");
+            songLabel.text = "Song: <error>";
+        }
+        else
+        {
+            var clip = DownloadHandlerAudioClip.GetContent(uwr);
+            audioPeer.PlayClip(clip);
+            fractalAnim.useAudio = true;
+            useAudio = true;
+            songLabel.text = "Song: " + Path.GetFileNameWithoutExtension(fullPath);
+
+            int samplesCount = clip.samples * clip.channels;
+            float[] raw = new float[samplesCount];
+            clip.GetData(raw, 0);
+
+            float[] mono = clip.channels == 1 ? raw : new float[clip.samples];
+            if (clip.channels > 1)
             {
-                Debug.LogError($"MP3 load error: {uwr.error}");
-                songLabel.text = "Song: <error>";
+                for (int i = 0; i < clip.samples; i++)
+                {
+                    float sum = 0;
+                    for (int c = 0; c < clip.channels; c++)
+                        sum += raw[i * clip.channels + c];
+                    mono[i] = sum / clip.channels;
+                }
             }
+
+            // FULLY OFFLOADED TO BACKGROUND THREAD
+            var moodTask = moodModel.PredictMoodAsync(mono, clip.frequency);
+            yield return new WaitUntil(() => moodTask.IsCompleted);
+
+            if (moodTask.Exception != null)
+                Debug.LogError("Mood prediction failed: " + moodTask.Exception);
             else
             {
-                var clip = DownloadHandlerAudioClip.GetContent(uwr);
-                audioPeer.PlayClip(clip);
-                fractalAnim.useAudio = true;
-                useAudio = true;
-                songLabel.text = "Song: " + Path.GetFileNameWithoutExtension(fullPath);
-
-                // 2) pull out the raw samples (mono)
-                int   samplesCount = clip.samples * clip.channels;
-                float[] raw = new float[samplesCount];
-                clip.GetData(raw, 0);
-
-                // if stereo, downmix to mono:
-                float[] mono = new float[clip.samples];
-                if (clip.channels == 1)
-                {
-                    mono = raw;
-                }
-                else
-                {
-                    for (int i = 0; i < clip.samples; i++)
-                    {
-                        // average across channels
-                        float sum = 0;
-                        for (int c = 0; c < clip.channels; c++)
-                            sum += raw[i * clip.channels + c];
-                        mono[i] = sum / clip.channels;
-                    }
-                }
-
-                float[] monoSamples = mono; 
-                int     sampleRate  = clip.frequency;
-
-                // Kick off the heavy work on a ThreadPool thread:
-                var moodTask = Task.Run(() =>
-                {
-                    // 1) extract features
-                    var feats = AudioFeatureExtractorNWaves.Extract(monoSamples, sampleRate);
-
-                    // 2) build the input vector
-                    float[] input = new float[9] {
-                        feats.MfccMean,
-                        feats.ChromaMean,
-                        feats.MelspecMean,
-                        feats.LpcMean,
-                        feats.PitchMean,
-                        feats.CentroidMean,
-                        feats.BandwidthMean,
-                        feats.ContrastMean,
-                        feats.RolloffMean
-                    };
-                
-                    Debug.Log($"Before mood inference: {input[0]:F2} {input[1]:F2} {input[2]:F2} {input[3]:F2} {input[4]:F2} {input[5]:F2} {input[6]:F2} {input[7]:F2} {input[8]:F2}");
-                    // 3) run Sentis inference (this is thread-safe as long as you don’t touch UnityEngine objects here)
-                    float[] mood = moodModel.PredictMood(input);
-                    
-                    Debug.Log($"Mood inference: {mood[0]:F2} valence, {mood[1]:F2} arousal");
-                    return mood; // [valence, arousal]
-                });
-
-                // Meanwhile the coroutine yields until the Task completes:
-                while (!moodTask.IsCompleted)
-                    yield return null;
-
-                if (moodTask.IsFaulted)
-                {
-                    Debug.LogError($"Mood inference failed: {moodTask.Exception}");
-                    yield break;
-                }
-
-                var moodResult = moodTask.Result;
-                float valence = moodResult[0];
-                float arousal = moodResult[1];
-
-                // 4) back on Unity thread—build your color and apply:
-                float h = Mathf.Clamp01(valence / 10f);
-                float s = Mathf.Clamp01(arousal / 10f);
-                Color suggested = Color.HSVToRGB(h, s, 1f);
+                var mood = moodTask.Result;
+                Color suggested = MoodInference.FromValenceArousal(mood[0], mood[1]);
 
                 baseColorPicker.CurrentColor = suggested;
                 baseColorPicker.onValueChanged.Invoke(suggested);
@@ -182,4 +219,75 @@ public class FractalUIBinder : MonoBehaviour
             }
         }
     }
+}
+
+    // IEnumerator LoadAndPlayMp3(string fullPath)
+    // {
+    //     var url = "file:///" + fullPath.Replace("\\", "/");
+    //     using (var uwr = UnityWebRequestMultimedia.GetAudioClip(url, UnityEngine.AudioType.MPEG))        {
+    //         yield return uwr.SendWebRequest();
+    //         if (uwr.result != UnityWebRequest.Result.Success)
+    //         {
+    //             Debug.LogError($"MP3 load error: {uwr.error}");
+    //             songLabel.text = "Song: <error>";
+    //         }
+    //         else
+    //         {
+    //             var clip = DownloadHandlerAudioClip.GetContent(uwr);
+    //             audioPeer.PlayClip(clip);
+    //             fractalAnim.useAudio = true;
+    //             useAudio = true;
+    //             songLabel.text = "Song: " + Path.GetFileNameWithoutExtension(fullPath);
+    //
+    //             // 2) pull out the raw samples (mono)
+    //             int   samplesCount = clip.samples * clip.channels;
+    //             float[] raw = new float[samplesCount];
+    //             clip.GetData(raw, 0);
+    //
+    //             // if stereo, downmix to mono:
+    //             float[] mono = new float[clip.samples];
+    //             if (clip.channels == 1)
+    //             {
+    //                 mono = raw;
+    //             }
+    //             else
+    //             {
+    //                 for (int i = 0; i < clip.samples; i++)
+    //                 {
+    //                     // average across channels
+    //                     float sum = 0;
+    //                     for (int c = 0; c < clip.channels; c++)
+    //                         sum += raw[i * clip.channels + c];
+    //                     mono[i] = sum / clip.channels;
+    //                 }
+    //             }
+    //
+    //             float[] monoSamples = mono; 
+    //             int     sampleRate  = clip.frequency;
+    //             
+    //             var feats = AudioFeatureExtractorNWaves.Extract(monoSamples, sampleRate);
+    //             // 1) extract features
+    //
+    //             // 2) build the input vector
+    //             float[] input = new float[7] {
+    //                 feats.MfccMean,
+    //                 feats.LpcMean,
+    //                 feats.PitchMean,
+    //                 feats.CentroidMean,
+    //                 feats.BandwidthMean,
+    //                 feats.ContrastMean,
+    //                 feats.RolloffMean
+    //             };
+    //
+    //             var moodTask = moodModel.PredictMood(input);
+    //             Color suggested = MoodInference.FromValenceArousal(moodTask[0], moodTask[1]);
+    //             Debug.Log($"Valence: {moodTask[0]}, Arousal: {moodTask[1]}, Color: {suggested}");
+    //                 
+    //             baseColorPicker.CurrentColor = suggested;
+    //             baseColorPicker.onValueChanged.Invoke(suggested);
+    //             glowColorPicker.CurrentColor = suggested;
+    //             glowColorPicker.onValueChanged.Invoke(suggested);
+    //         }
+    //     }
+    // }
 }
