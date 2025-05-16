@@ -40,7 +40,19 @@ public class AudioPeer : MonoBehaviour
     void Start()
     {
         _audioSource = GetComponent<AudioSource>();
+        _audioSource.clip = null;
+        _audioSource.Stop();
         SetAudioProfile(value: (float)audioProfileSetter);
+    }
+    
+    public void PlayClip(AudioClip clip)
+    {
+        if (_audioSource.clip != null)
+            _audioSource.Stop();
+
+        _audioSource.clip = clip;
+        _audioSource.Play();
+        _audioSource.loop = true;
     }
 
     void Update()

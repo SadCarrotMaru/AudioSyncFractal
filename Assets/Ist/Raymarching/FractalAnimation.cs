@@ -1,3 +1,4 @@
+using Unity.Mathematics.Geometry;
 using UnityEngine;
 
 public enum FractalScene
@@ -7,7 +8,6 @@ public enum FractalScene
     Hartverdrahtet = 3,
     Kleinian = 4,
     Knightyan = 5,
-    Blend = 6
 }
 
 public enum AudioType
@@ -19,7 +19,9 @@ public enum AudioType
 public class FractalAnimation : MonoBehaviour
 {
     public bool useAudio = false;
-    public AudioType audioType = AudioType.Amplitude;
+    // public AudioType audioType = AudioType.Amplitude;
+    public AudioType audioType = AudioType.SpectralRollOff;
+
     public Raymarcher targetRaymarcher;
     public FractalScene scene = FractalScene.Hartverdrahtet; // Which fractal to render
     [Range(0f, 5f)]
@@ -61,16 +63,21 @@ public class FractalAnimation : MonoBehaviour
         var intensity = Mathf.PingPong(AudioPeer.spectralRolloffBuffer, 1.0f);
         smoothedIntensity = Mathf.SmoothDamp(smoothedIntensity, intensity,
                                             ref colorVelocity, colorSmoothTime);
+
         Color dynamicColor = color;
-        if(useAudio){
+        
+        if (useAudio)
+        {
+            float scaled = Mathf.Clamp01(intensity * 5f);
             dynamicColor = new Color(
-                color.r * intensity,
-                color.g * intensity,
-                color.b * intensity,
+                color.r * scaled,
+                color.g * scaled,
+                color.b * scaled,
                 color.a
             );
         }
-
+        
+        
         targetRaymarcher.SetShaderScene((float)scene);
         targetRaymarcher.SetShaderColor(dynamicColor);
         targetRaymarcher.SetShaderGlow(glow_color);

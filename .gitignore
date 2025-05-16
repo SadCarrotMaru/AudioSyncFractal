@@ -12,6 +12,7 @@
 *.user
 *.log
 *.tlog
+.idea
 
 *.sln
 *.csproj
