@@ -68,11 +68,11 @@ public class FractalAnimation : MonoBehaviour
         
         if (useAudio)
         {
-            float scaled = Mathf.Clamp01(intensity * 5f);
+            //float scaled = Mathf.Clamp01(intensity * 15f);
             dynamicColor = new Color(
-                color.r * scaled,
-                color.g * scaled,
-                color.b * scaled,
+                color.r * smoothedIntensity,
+                color.g * smoothedIntensity,
+                color.b * smoothedIntensity,
                 color.a
             );
         }
@@ -93,7 +93,7 @@ public class FractalAnimation : MonoBehaviour
                                      ref varVelocity, varSmoothTime);
 
 
-        targetRaymarcher.SetShaderVar(smoothedVar);
+        targetRaymarcher.SetShaderVar(smoothedVar * 5.0f);
     }
 }
 
